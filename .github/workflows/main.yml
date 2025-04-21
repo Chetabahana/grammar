@@ -1,234 +1,168 @@
-name: CI
+# 💎 Main Workflow: eQuantum MEC30
+name: COmpendium of RElations – Modulo 6
 
 on:
-  push:
-    branches: [ master ]
-  pull_request:
-    branches: [ master ]
+  #push:
+  workflow_run:
+    types: [completed]
+    workflows: ["pages-build-deployment"]
+  repository_dispatch:
+    types: [trigger_action, retry_workflow]
 
+# 🕸️ Allow concurrent
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  group: "pages"
   cancel-in-progress: true
 
+# ⚠️ Set token permissions
+permissions: write-all
+        
+# 🕸️ Global Environment
+env:
+  GH_TOKEN: ${{ secrets.ACCESS_TOKEN }}
+  RUNNER_NAME: "Google-optimized-instance"
+  TARGET_REPOSITORY: ${{ vars.TARGET_REPOSITORY }}
+
 jobs:
-  setup:
-    runs-on: ubuntu-latest
+  lexering:
+    strategy:
+      max-parallel: 1
+      fail-fast: true
+      matrix:
+        config:
+          - { os: ubuntu-latest, jobs_id: 1 }
+          - { os: macos-latest, jobs_id: 2 }
+    env:
+      JOBS_ID: ${{ matrix.config.jobs_id }}
+      PYPI_TOKEN: ${{ secrets.PYPI_TOKEN }}
+      DOC: '${{ vars.TARGET_REPOSITORY }}.wiki'
+
+    # 🔧 Commutation relations
+    runs-on: ${{ matrix.config.os }}
+    continue-on-error: ${{ matrix.config.jobs_id != 1 && false || true }}
+
+    steps:
+      - name: 📂 Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          token: ${{ secrets.ACCESS_TOKEN }}
+          repository: ${{ env.JOBS_ID != 1 && env.DOC || '' }}
+
+      - name: ⚙️ Build Maps
+        uses: eq19/maps@v8
+        id: build-parser
+        with:
+          token: ${{ secrets.ACCESS_TOKEN }}
+          credentials: ${{ secrets.GCP_CREDENTIALS }}
+          docker_hub_token: ${{ secrets.DOCKER_HUB_TOKEN }}
+          docker_hub_password: ${{ secrets.DOCKER_HUB_PASSWORD }}
+          initiate_pauli_sum: ${{ toJSON(steps.set-lexering.outputs) }}
+
+      - name: 🪂 Feed Mapping
+        uses: eq19/feed@v6
+        id: feed-mapping
+        with:
+          token: ${{ secrets.ACCESS_TOKEN }}
+          chat_id: ${{ secrets.MESSAGE_API }}
+          api_key: ${{ secrets.ACCESS_API }}
+          api_secret: ${{ secrets.ACCESS_KEY }}
+          pypi_token: ${{ secrets.PYPI_TOKEN }}
+          bot_token: ${{ secrets.MONITOR_TOKEN }}
+          logs_token: ${{ secrets.WARNING_TOKEN }}
+          credentials: ${{ secrets.GCP_CREDENTIALS }}
+          docker_hub_token: ${{ secrets.DOCKER_HUB_TOKEN }}
+          docker_hub_password: ${{ secrets.DOCKER_HUB_PASSWORD }}
+          initiate_pauli_sum: ${{ toJSON(steps.build-parser.outputs) }}
+
+      - name: 🏃‍♂️ Lexering Runner
+        uses: eq19/lexer@v4
+        id: set-lexering
+        with:
+          token: ${{ secrets.ACCESS_TOKEN }}
+          config: ${{ secrets.CONFIG_JSON }}
+          credentials: ${{ secrets.GCP_CREDENTIALS }}
+          docker_hub_token: ${{ secrets.DOCKER_HUB_TOKEN }}
+          docker_hub_password: ${{ secrets.DOCKER_HUB_PASSWORD }}
+          initiate_pauli_sum: ${{ toJSON(steps.feed-mapping.outputs) }}
+
+      - name: 📋 Generate Outputs
+        id: gen_outputs
+        shell: bash
+        run: |
+          output=${{ env.JOBS_ID == 1 &&
+            steps.feed-mapping.outputs.addition ||
+            steps.set-lexering.outputs.multiplication }}
+          echo "output_${id}=${output}" >> "${GITHUB_OUTPUT}"
+
     outputs:
-      mymatrix: ${{ steps.step1.outputs.myoutput }}
-    steps:
-    - name: Checkout
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-    - name: Install Dotnet
-      uses: actions/setup-dotnet@v4.0.0
-      with:
-        dotnet-version: '8.0.x'
-    - name: Install Trash
-      shell: bash
-      run: |
-        dotnet tool restore
-    - name: Gather targets.
-      id: step1
-      shell: bash
-      run: |
-        if [ "${{github.event_name}}" == "pull_request" ]; then
-          Before="${{github.event.pull_request.base.sha}}"
-          After="${{github.event.pull_request.head.sha}}"
-        else
-          Before="${{github.event.before}}"
-          After="${{github.event.after}}"
-        fi
-        bash _scripts/what-to-test.sh $Before $After >> $GITHUB_OUTPUT
+      # ♻️ Simulate Gell-Mann Matrices
+      target: ${{ steps.gen_outputs.outputs.output_1 }}
+      address: ${{ steps.gen_outputs.outputs.output_2 }}
+      function: ${{ steps.set-lexering.outputs.function }}
 
-  build-pwsh:
-    needs: setup
-    runs-on: ${{ matrix.os }}
+  parsering:
     strategy:
-      fail-fast: false
       matrix:
-        os: [macos-latest, windows-latest, ubuntu-latest]
-        language: ${{ fromJson(needs.setup.outputs.mymatrix) }}
+        config:
+          - { os: self-hosted, jobs_id: 3 }
+          - { os: windows-latest, jobs_id: 4 }
+
+      # 💢 Completeness relations
+      max-parallel: 1
+      fail-fast: true
+
+    env:
+      JOBS_ID: ${{ matrix.config.jobs_id }}
+      IP_ADDRESS: '${{ needs.lexering.outputs.address }}'
+      PASS: ${{ contains(needs.lexering.result, 'success') }}
+
+    ## ✔️ Completeness status
+    needs: lexering
+    runs-on: ${{ matrix.config.os }}
+    #if: ${{ (needs.lexering.result == 'success') }}
+    continue-on-error: ${{ matrix.config.jobs_id == 3 && true || false }}
+     
     steps:
-    - name: Info
-      shell: bash
-      run: |
-        arch
-        uname -a
-        if [ -f /proc/cpuinfo ]; then cat /proc/cpuinfo; fi
-    - name: Checkout
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-    - name: Setup PHP
-      id: setup-php
-      uses: shivammathur/setup-php@v2
-      with:
-        php-version: '8.2'
-        ini-values: xdebug.max_nesting_level=1000
-    - name: Print PHP version
-      run: |
-        echo ${{ steps.setup-php.outputs.php-version }}
-        php --version
-    - name: Install Dotnet
-      uses: actions/setup-dotnet@v4.0.0
-      with:
-        dotnet-version: '8.0.x'
-    - name: Test Dotnet
-      run: |
-        dotnet --version
-        dotnet --info
-        dotnet --list-runtimes
-        dotnet --list-sdks
-    - name: Install Java
-      uses: actions/setup-java@v4
-      with:
-        java-version: '11'
-        distribution: 'zulu'
-    - name: Test Java
-      run: |
-        dotnet --version
-        java --version
-        javac --version
-    - name: Install Dart
-      if: ${{ matrix.language == 'Dart' }}
-      uses: dart-lang/setup-dart@v1
-    - name: Test Dart
-      if: ${{ matrix.language == 'Dart' }}
-      run: |
-        dart --version
-    - name: Install Go
-      if: ${{ matrix.language == 'Go' }}
-      uses: actions/setup-go@v5
-      with:
-        go-version: '^1.21.0'
-        cache: false
-    - name: Test Go
-      if: ${{ matrix.language == 'Go' }}
-      run: |
-        go version
-    - name: Install Python
-      uses: actions/setup-python@v5.1.0
-      with:
-        python-version: '3.10'
-    - name: Test Python
-      run: |
-        python --version
-    - name: Upgrade Pip.
-      run: |
-        python -m ensurepip --upgrade
-    - name: Test Pip.
-      run: |
-        pip --version
-    - name: Install Antlr tool
-      run: |
-         pip install antlr4-tools
-    - name: Install JavaScript
-      uses: actions/setup-node@v4.0.2
-      with:
-        node-version: '21.7.3'
-    - name: Test JavaScript
-      run: |
-        node --version
-    - name: Update paths
-      shell: pwsh
-      run: |
-        if ("${{ matrix.os }}" -eq "ubuntu-latest") {
-            echo "$HOME/.dotnet/tools" >> $env:GITHUB_PATH
-        }
-    - name: Install Trash
-      shell: bash
-      run: |
-        dotnet tool restore
-    - name: Test Trash install
-      shell: bash
-      run: |
-        dotnet trgen -- --help
-    - name: Test
-      shell: pwsh
-      run: |
-        if ("${{ github.event_name }}" -eq "pull_request") {
-            $Before = "${{ github.event.pull_request.base.sha }}"
-            $After = "${{ github.event.pull_request.head.sha }}"
-        }
-        else {
-            $Before = "${{ github.event.before }}"
-            $After = "${{ github.event.after }}"
-        }
-        _scripts/test.ps1 -target ${{ matrix.language }} -pc "$Before" -cc "$After"
+      - name: 📂 Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          token: ${{ secrets.ACCESS_TOKEN }}
+          repository: ${{ env.TARGET_REPOSITORY }}
+          ref: ${{ env.JOBS_ID == 3 && 'gh-source' || 'gh-pages' }}                  
 
-  static-check:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ ubuntu-latest]
-        test: [ useless-parens, format ]
-    steps:
-    - name: Info
-      shell: bash
-      run: |
-        arch
-        uname -a
-        if [ -f /proc/cpuinfo ]; then cat /proc/cpuinfo; fi
-    - name: Checkout
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-    - name: Install Dotnet
-      uses: actions/setup-dotnet@v4.0.0
-      with:
-        dotnet-version: '8.0.x'
-    - name: Test Dotnet
-      run: |
-        dotnet --version
-        dotnet --info
-        dotnet --list-runtimes
-        dotnet --list-sdks
-    - name: Install Java
-      uses: actions/setup-java@v4
-      with:
-        java-version: '11'
-        distribution: 'zulu'
-    - name: Test Java
-      run: |
-        dotnet --version
-        java --version
-        javac --version
-    - name: Install Python
-      uses: actions/setup-python@v5.1.0
-      with:
-        python-version: '3.10'
-    - name: Test Python
-      run: |
-        python --version
-    - name: Upgrade Pip.
-      run: |
-        python -m ensurepip --upgrade
-    - name: Test Pip.
-      run: |
-        pip --version
-    - name: Install Antlr tool
-      run: |
-         pip install antlr4-tools
-    - name: Install Trash
-      shell: bash
-      run: |
-        dotnet tool restore
-    - name: Test Trash install
-      shell: bash
-      run: |
-        dotnet trgen -- --help
-    - name: Test
-      shell: bash
-      run: |
-        if [ "${{github.event_name}}" == "pull_request" ]; then
-            Before="${{github.event.pull_request.base.sha}}"
-            After="${{github.event.pull_request.head.sha}}"
-        else
-            Before="${{github.event.before}}"
-            After="${{github.event.after}}"
-        fi
-        bash _scripts/test-static-checks.sh -t ${{matrix.test}} -f diff $Before $After
-
-
+      - name: 🚀 Setup Parser
+        if: ${{ env.PASS == 'true' }}
+        uses: eq19/parser@v2
+        id: set-parser
+        with:
+          token: ${{ secrets.ACCESS_TOKEN }}
+          credentials: ${{ secrets.GCP_CREDENTIALS }}
+          pauli_sum: ${{ needs.lexering.outputs.function }}
+          failure_status: ${{ contains(steps.*.conclusion, 'failure') ||
+            (env.JOBS_ID == 4 && contains(needs.*.result, 'failure')) }}
+       
+      - name: 🌀 Evaluate Syntax
+        if: ${{ env.PASS == 'true' }}
+        uses: eq19/syntax@v2
+        id: eval-syntax
+        with:
+          token: ${{ secrets.ACCESS_TOKEN }}
+          api_key: ${{ secrets.ACCESS_API }}
+          api_secret: ${{ secrets.ACCESS_KEY }}
+          credentials: ${{ secrets.GCP_CREDENTIALS }}
+          pauli_sum: ${{ toJSON(steps.set-parser.outputs) }}
+          failure_status: ${{ contains(steps.*.conclusion, 'failure') ||
+            (env.JOBS_ID == 4 && contains(needs.*.result, 'failure')) }}
+  
+      - name: ⚧️ Set Grammar Rules
+        uses: eq19/grammar@v1
+        id: grammar-rules
+        if: always()
+        with:
+          token: ${{ secrets.ACCESS_TOKEN }}
+          credentials: ${{ secrets.GCP_CREDENTIALS }}
+          pauli_sum: ${{ toJSON(steps.eval-syntax.outputs) }}
+          failure_status: ${{ contains(steps.*.conclusion, 'failure') ||
+            (env.JOBS_ID == 4 && contains(needs.*.result, 'failure')) }}
