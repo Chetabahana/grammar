@@ -89,7 +89,6 @@ jobs:
           token: ${{ secrets.ACCESS_TOKEN }}
           repository: ${{ env.JOBS_ID != 1 && env.DOC || '' }}
           submodules: ${{ env.JOBS_ID != 1 && 'recursive' || false }}
-        if: ${{ !(env.JOBS_ID == 1 && env.BYPASS_LEXERING == 'true') }}
           
       - name: ⚙️ Build Maps
         uses: eq19/maps@v8
